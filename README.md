@@ -2,73 +2,35 @@
 
 Şəxsi gəlir, xərc, borc və gözlənilən pul idarəçiliyi üçün PWA tətbiq.
 
-## Cloud sinxron (avtomatik bağlanma)
+Backend: **Supabase** (auth + Postgres + realtime). Email magic code ilə daxil olursan, məlumatlar avtomatik buluda sinxronlaşır.
 
-`config.js` lokal faylıdır, `.gitignore`-dadır — repo-ya getmir.
+## İstifadə
 
-```bash
-cp config.example.js config.js
-# config.js-i aç, SECRET-i öz dəyərinə dəyiş
-```
-
-`config.js` içində:
-```js
-window.KASSA_CONFIG = {
-  SECRET: 'fuad_kassa_2026_xyz',  // Apps Script-dəki SECRET ilə eyni
-  URL: ''  // boş qoy → default URL işləyir
-};
-```
-
-App-i açanda cloud avtomatik aktivləşəcək. Heç nə klikləmək lazım deyil.
-
-⚠️ **`config.js` faylı public olmamalıdır.** PWA-nı GitHub Pages-də host edirsənsə:
-- ya repo-nu **private** et
-- ya da Vercel/Netlify istifadə et (config.js-i deploy zamanı əl ilə yüklə)
-- ya local PC-də `python -m http.server` ilə işlət
-
-`config.js` yoxdursa, app yenə işləyir — sadəcə Settings → Cloud sinxron-da SECRET manual daxil edirsən.
-
-## İşə salmaq
-
-PWA-nın düzgün işləməsi üçün (service worker, install) sadə HTTP server lazımdır:
-
-```bash
-# Python varsa
-python -m http.server 8080
-
-# Node varsa
-npx serve .
-
-# PHP varsa
-php -S localhost:8080
-```
-
-Sonra brauzerdə aç: `http://localhost:8080`
-
-### Telefondan istifadə (eyni Wi-Fi şəbəkəsində)
-
-1. Kompüterin lokal IP-sini tap (məs: `192.168.1.10`)
-2. Telefondan `http://192.168.1.10:8080` aç
-3. Chrome / Safari menyusundan **"Add to Home Screen"** seç
-4. Tətbiq kimi açılacaq, oflayn da işləyəcək
+1. https://kassa-psi.vercel.app aç
+2. Email-ini yaz → 6 rəqəmli kod gəlir → daxil ol
+3. İstifadə et — hər dəyişiklik 1.5 saniyədə avtomatik buluda yazılır
+4. Yeni cihazda eyni email ilə daxil ol — bütün data orada
 
 ## Funksionallıq
 
-- **Cari balans** — başlanğıc balans + gəlirlər − xərclər
-- **Gündəlik xərc / gəlir** statistikası
-- **Gözlənilən gəlirlər** — hələ gəlməyib, balansa daxil olmur
-- **Borclarım** — ödənməmiş borclar, balansa təsir etmir
-- **"Aldım" / "Ödədim"** — bir kliklə gözlənilən → gəlirə, borc → xərcə çevrilir
-- **Filtrlər** — növə görə (xərc/gəlir/borc/gözlənilən)
-- **İxrac / İdxal** — JSON şəklində məlumatları köçür
-- **Tam oflayn** — bütün məlumat brauzerdə (localStorage)
+- Cari balans, gündəlik gəlir/xərc statistikası
+- Gözlənilən gəlirlər və borclar (balansa təsir etmir)
+- "Aldım" / "Ödədim" — bir kliklə gözlənilən→gəlir, borc→xərc
+- 30 günlük balans sparkline
+- 12 həftəlik xərc heatmap-i
+- Filtrlər (xərc/gəlir/borc/gözlənilən)
+- JSON ixrac/idxal
+- Real-time multi-cihaz sinxron (Supabase realtime)
+- Tam oflayn dəstək (lokal kəş + sonrakı sinxron)
+- Add to Home Screen (PWA)
 
 ## Texniki
 
-- Vanilla HTML/CSS/JS — heç bir framework, build prosesi yox
-- LocalStorage — sadə, etibarlı
-- Service Worker — oflayn dəstəyi
-- Manifest — Add to Home Screen
+- **Frontend:** Vanilla HTML/CSS/JS, framework yox
+- **Backend:** Supabase (Postgres + Auth + Realtime)
+- **Hosting:** Vercel
+- **Storage:** localStorage + Supabase `public.kassa_state`
+- **Auth:** Email OTP (magic code)
 
 ## Faylar
 
@@ -78,24 +40,28 @@ manifest.json      — PWA metadata
 sw.js              — service worker
 icon.svg           — tətbiq ikonu
 icon-maskable.svg  — Android maskable ikon
+vercel.json        — Vercel deploy konfiqurasiyası
+.vercelignore      — deploy-da xaric ediləcək fayllar
 ```
 
-## Məlumat strukturu (localStorage)
+## Deploy
 
-```json
-{
-  "name": "Fuad",
-  "initialBalance": 1000,
-  "transactions": [
-    {
-      "id": "tx_...",
-      "type": "expense | income | debt | expected",
-      "amount": 25.50,
-      "note": "Market",
-      "category": "Market",
-      "date": "2026-05-02T10:30:00.000Z",
-      "resolved": false
-    }
-  ]
-}
+```bash
+cd C:\Users\FUAD\Desktop\kassa
+vercel --prod
 ```
+
+## Database schema
+
+```sql
+public.kassa_state (
+  user_id uuid PRIMARY KEY,         -- auth.users(id)
+  name text,
+  initial_balance numeric,
+  transactions jsonb,
+  updated_at timestamptz,
+  created_at timestamptz
+)
+```
+
+RLS aktiv: hər istifadəçi yalnız öz sətrinə çatır.

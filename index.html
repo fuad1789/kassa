@@ -15,6 +15,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 :root {
   --bg: #0F0D0A;
@@ -763,7 +764,122 @@ main { position: relative; z-index: 2; }
 .settings-action.danger { color: var(--red); border-color: rgba(196, 107, 87, 0.25); }
 .settings-action.danger:hover { background: var(--red-soft); border-color: var(--red); }
 
-/* ── Cloud sync ───────────────── */
+/* ── Sign-in screen ───────────── */
+.signin-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+  background:
+    radial-gradient(ellipse 70% 50% at 50% 20%, rgba(212, 162, 76, 0.10) 0%, transparent 60%),
+    var(--bg);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 22px;
+  overflow-y: auto;
+}
+.signin-overlay.open { display: flex; }
+.signin-card {
+  width: 100%;
+  max-width: 380px;
+  text-align: center;
+  position: relative;
+  z-index: 1;
+}
+.signin-brand {
+  font-family: var(--sans);
+  font-weight: 600;
+  font-size: 14px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 8px;
+}
+.signin-title {
+  font-family: var(--sans);
+  font-size: 32px;
+  font-weight: 600;
+  letter-spacing: -0.035em;
+  color: var(--text);
+  margin-bottom: 10px;
+  line-height: 1.05;
+}
+.signin-sub {
+  font-size: 14px;
+  color: var(--text-dim);
+  margin-bottom: 36px;
+  line-height: 1.5;
+}
+.signin-form { margin-top: 8px; }
+.signin-input {
+  width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 16px 18px;
+  color: var(--text);
+  font-size: 16px;
+  outline: none;
+  transition: border-color 0.2s, background 0.2s;
+  font-family: var(--sans);
+  text-align: center;
+  letter-spacing: -0.005em;
+}
+.signin-input:focus { border-color: var(--gold); background: var(--surface-2); }
+.signin-input.otp {
+  font-family: var(--mono);
+  letter-spacing: 0.4em;
+  font-size: 22px;
+  font-weight: 500;
+}
+.signin-input::placeholder { color: var(--text-muted); }
+
+.signin-btn {
+  width: 100%;
+  background: var(--text);
+  color: var(--bg);
+  border-radius: 14px;
+  padding: 17px;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  margin-top: 12px;
+  transition: transform 0.15s, opacity 0.2s;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.4);
+}
+.signin-btn:active { transform: scale(0.985); }
+.signin-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.signin-status {
+  margin-top: 18px;
+  font-size: 13px;
+  font-family: var(--mono);
+  color: var(--text-muted);
+  letter-spacing: 0.005em;
+  min-height: 18px;
+}
+.signin-status.error { color: var(--red); }
+.signin-status.ok { color: var(--green); }
+
+.signin-back {
+  margin-top: 24px;
+  font-size: 12px;
+  color: var(--text-muted);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  font-family: var(--mono);
+  letter-spacing: 0.05em;
+}
+
+.signin-target {
+  color: var(--gold);
+  font-family: var(--mono);
+  font-size: 13px;
+  letter-spacing: -0.005em;
+  word-break: break-all;
+}
+
+/* ── Cloud sync (status dot) ─── */
 .menu-btn { position: relative; }
 .cloud-dot {
   position: absolute;
@@ -884,6 +1000,30 @@ main { position: relative; z-index: 2; }
 </style>
 </head>
 <body>
+<!-- Sign-in screen -->
+<div class="signin-overlay" id="signin-overlay">
+  <div class="signin-card">
+    <div class="signin-brand">Kassa</div>
+
+    <div id="signin-stage-email">
+      <div class="signin-title">Daxil ol</div>
+      <div class="signin-sub">Email-ini yaz, sənə 6 rəqəmli kod göndərək.</div>
+      <input type="email" inputmode="email" autocomplete="email" class="signin-input" id="signin-email" placeholder="email@misal.com">
+      <button class="signin-btn" id="signin-request-btn">Kod göndər</button>
+    </div>
+
+    <div id="signin-stage-otp" style="display:none">
+      <div class="signin-title">Kod yoxla</div>
+      <div class="signin-sub"><span class="signin-target" id="signin-otp-target"></span> ünvanına 6 rəqəmli kod göndərildi.</div>
+      <input type="text" inputmode="numeric" autocomplete="one-time-code" class="signin-input otp" id="signin-otp" placeholder="000000" maxlength="6">
+      <button class="signin-btn" id="signin-verify-btn">Yoxla</button>
+      <button class="signin-back" id="signin-back-btn">← email dəyişdir</button>
+    </div>
+
+    <div class="signin-status" id="signin-status"></div>
+  </div>
+</div>
+
 <main>
   <header class="greeting">
     <div>
@@ -1049,10 +1189,11 @@ main { position: relative; z-index: 2; }
   </div>
   <div class="settings-row">
     <div>
-      <div class="settings-label">Cloud sinxron</div>
-      <div class="cloud-status-line" id="cloud-status"><span class="dot"></span><span id="cloud-status-text">Bağlı deyil</span></div>
+      <div class="settings-label">Hesab</div>
+      <div class="cloud-status-line" id="cloud-status"><span class="dot"></span><span id="cloud-status-text">Yüklənir…</span></div>
+      <div class="settings-desc" id="account-email" style="margin-top:4px"></div>
     </div>
-    <button class="settings-action" id="cloud-config">Quraşdır</button>
+    <button class="settings-action danger" id="signout-btn">Çıxış</button>
   </div>
   <div class="settings-row">
     <div>
@@ -1077,54 +1218,17 @@ main { position: relative; z-index: 2; }
   </div>
 </div>
 
-<!-- Cloud setup sheet -->
-<div class="sheet" id="cloud-sheet">
-  <div class="sheet-handle"></div>
-  <h3>Cloud sinxron</h3>
-  <div class="subtitle">Google Sheets backup</div>
-
-  <div style="background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:20px">
-    <div style="font-size:10px;color:var(--text-muted);letter-spacing:0.18em;text-transform:uppercase;font-family:var(--mono);font-weight:600;margin-bottom:6px">Backend</div>
-    <div style="font-family:var(--mono);font-size:11px;color:var(--green);word-break:break-all;letter-spacing:-0.005em">script.google.com/.../exec ✓</div>
-  </div>
-
-  <input type="hidden" id="cloud-url">
-
-  <div class="field">
-    <label class="field-label">Açar (secret)</label>
-    <input type="text" id="cloud-secret" class="field-input" placeholder="Apps Script-də təyin etdiyin söz" autocomplete="off">
-    <div style="font-size:11px;color:var(--text-muted);font-family:var(--mono);margin-top:8px;letter-spacing:0.01em">Apps Script-də <code style="background:var(--bg);padding:1px 5px;border-radius:3px;border:1px solid var(--line);color:var(--gold)">const SECRET = '...'</code> arasındakı dəyər</div>
-  </div>
-
-  <div style="text-align:center;margin:8px 0 14px;font-size:13px;color:var(--text-muted);min-height:18px" id="cloud-test-result"></div>
-
-  <div class="tx-actions">
-    <button class="tx-action" id="cloud-test">Test et</button>
-    <button class="tx-action primary" id="cloud-save">Yadda saxla</button>
-  </div>
-
-  <div id="cloud-actions-block" style="display:none;margin-top:24px;padding-top:20px;border-top:1px solid var(--line);">
-    <div style="font-size:11px;color:var(--text-muted);letter-spacing:0.18em;text-transform:uppercase;font-family:var(--mono);font-weight:600;margin-bottom:14px">Əməliyyatlar</div>
-    <div class="tx-actions" style="margin-bottom:10px">
-      <button class="tx-action" id="cloud-pull">Buluddan al</button>
-      <button class="tx-action" id="cloud-push">Buluda göndər</button>
-    </div>
-    <button class="tx-action danger" id="cloud-disconnect" style="width:100%;margin-top:6px">Bağlantını sil</button>
-  </div>
-</div>
-
 <div class="toast" id="toast"></div>
 
-<script src="config.js" onerror="console.info('[kassa] config.js yoxdur — manual SECRET tələb olunacaq')"></script>
 <script>
 'use strict';
 
 const STORAGE_KEY = 'kassa_v1';
-const CLOUD_KEY = 'kassa_cloud_v1';
-const DEFAULT_CLOUD_URL = 'https://script.google.com/macros/s/AKfycbyEWAPQ5DnYUOViYme5GlE3tdLejEzV_2ud98dc-Ry35yUWxcr0Q6bvHcwHtMbYZOnR/exec';
-const CFG = (typeof window !== 'undefined' && window.KASSA_CONFIG) ? window.KASSA_CONFIG : {};
-const CLOUD_URL = (CFG.URL && CFG.URL.trim()) ? CFG.URL.trim() : DEFAULT_CLOUD_URL;
-const CLOUD_SECRET_FROM_CONFIG = (CFG.SECRET && CFG.SECRET.trim() && CFG.SECRET.trim() !== 'BURAYA_SECRETI_YAZ') ? CFG.SECRET.trim() : '';
+const SUPABASE_URL = 'https://bnfgxqvxfferheixnvyx.supabase.co';
+const SUPABASE_ANON = 'sb_publishable_imffywwcyYsvQJ3hemjruQ_pbTYtx6C';
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON, {
+  auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false }
+});
 
 const CATEGORIES = {
   expense: ['Market', 'Yemək', 'Nəqliyyat', 'Kommunal', 'Geyim', 'Əyləncə', 'Səhiyyə', 'Hədiyyə', 'Digər'],
@@ -1159,31 +1263,22 @@ function saveState() {
   queueCloudSync();
 }
 
-let cloudConfig = loadCloud();
-function loadCloud() {
-  let c = { url: CLOUD_URL, secret: '', enabled: false, lastSync: null };
-  try {
-    const raw = localStorage.getItem(CLOUD_KEY);
-    if (raw) c = { ...c, ...JSON.parse(raw) };
-  } catch (e) {}
-  c.url = CLOUD_URL;
-  if (CLOUD_SECRET_FROM_CONFIG) {
-    c.secret = CLOUD_SECRET_FROM_CONFIG;
-    c.enabled = true;
-  }
-  return c;
-}
-function saveCloud() { localStorage.setItem(CLOUD_KEY, JSON.stringify(cloudConfig)); }
+let session = null;
+let suppressSync = false;
+let syncTimer = null;
+let lastPushAt = 0;
+let realtimeChannel = null;
 
-function setCloudDot(state) {
+function setCloudDot(s) {
   const dot = $('cloud-dot');
   const line = $('cloud-status');
-  dot.className = 'cloud-dot ' + (state || '');
-  line.className = 'cloud-status-line ' + (state || '');
+  if (dot) dot.className = 'cloud-dot ' + (s || '');
+  if (line) line.className = 'cloud-status-line ' + (s || '');
 }
-function setCloudStatus(text, state) {
-  $('cloud-status-text').textContent = text;
-  setCloudDot(state);
+function setCloudStatus(text, s) {
+  const el = $('cloud-status-text');
+  if (el) el.textContent = text;
+  setCloudDot(s);
 }
 
 function timeAgo(iso) {
@@ -1195,111 +1290,214 @@ function timeAgo(iso) {
   if (m < 60) return m + ' dəq əvvəl';
   const h = Math.floor(m / 60);
   if (h < 24) return h + ' saat əvvəl';
-  const d = Math.floor(h / 24);
-  return d + ' gün əvvəl';
+  return Math.floor(h / 24) + ' gün əvvəl';
 }
 
 function refreshCloudStatus() {
-  if (!cloudConfig.url || !cloudConfig.enabled) {
-    setCloudStatus('Bağlı deyil', '');
-    $('cloud-config').textContent = 'Quraşdır';
+  const emailEl = $('account-email');
+  if (!session) {
+    setCloudStatus('Daxil olunmayıb', '');
+    if (emailEl) emailEl.textContent = '';
     return;
   }
-  const prefix = CLOUD_SECRET_FROM_CONFIG ? 'config.js · ' : '';
-  const last = cloudConfig.lastSync ? prefix + 'son: ' + timeAgo(cloudConfig.lastSync) : prefix + 'aktiv';
+  const last = lastPushAt ? 'son: ' + timeAgo(new Date(lastPushAt).toISOString()) : 'aktiv';
   setCloudStatus(last, 'ok');
-  $('cloud-config').textContent = 'İdarə et';
+  if (emailEl) emailEl.textContent = session.user.email;
 }
 
-let syncTimer;
 function queueCloudSync() {
-  if (!cloudConfig.enabled || !cloudConfig.url) return;
+  if (!session || suppressSync) return;
+  setCloudStatus('Sinxronlaşır…', 'syncing');
   clearTimeout(syncTimer);
-  syncTimer = setTimeout(syncToCloud, 1500);
+  syncTimer = setTimeout(pushToCloud, 1500);
 }
 
-async function syncToCloud(silent) {
-  if (!cloudConfig.url || !cloudConfig.secret) return;
-  if (!silent) setCloudStatus('Sinxronlaşır…', 'syncing');
+async function pushToCloud() {
+  if (!session) return;
   try {
-    const res = await fetch(cloudConfig.url, {
-      method: 'POST',
-      body: JSON.stringify({ secret: cloudConfig.secret, state }),
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      redirect: 'follow'
-    });
-    const data = await res.json();
-    if (data.ok) {
-      cloudConfig.lastSync = new Date().toISOString();
-      saveCloud();
-      refreshCloudStatus();
-    } else {
-      setCloudStatus('Xəta: ' + (data.error || 'naməlum'), 'error');
+    const { error } = await sb
+      .from('kassa_state')
+      .upsert({
+        user_id: session.user.id,
+        name: state.name,
+        initial_balance: state.initialBalance,
+        transactions: state.transactions
+      }, { onConflict: 'user_id' });
+    if (error) {
+      setCloudStatus('Xəta: ' + error.message, 'error');
+      return;
     }
+    lastPushAt = Date.now();
+    refreshCloudStatus();
   } catch (err) {
     setCloudStatus('Şəbəkə xətası', 'error');
   }
 }
 
 async function pullFromCloud() {
-  if (!cloudConfig.url || !cloudConfig.secret) return false;
+  if (!session) return false;
   setCloudStatus('Yüklənir…', 'syncing');
   try {
-    const url = cloudConfig.url + (cloudConfig.url.includes('?') ? '&' : '?') + 'secret=' + encodeURIComponent(cloudConfig.secret);
-    const res = await fetch(url, { redirect: 'follow' });
-    const data = await res.json();
-    if (data.ok && data.state && Array.isArray(data.state.transactions)) {
+    const { data, error } = await sb
+      .from('kassa_state')
+      .select('*')
+      .eq('user_id', session.user.id)
+      .maybeSingle();
+    if (error) {
+      setCloudStatus('Xəta: ' + error.message, 'error');
+      return false;
+    }
+    if (data) {
+      suppressSync = true;
       state = {
-        name: data.state.name || state.name,
-        initialBalance: Number(data.state.initialBalance) || 0,
-        transactions: data.state.transactions
+        name: data.name || state.name,
+        initialBalance: Number(data.initial_balance) || 0,
+        transactions: Array.isArray(data.transactions) ? data.transactions : []
       };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-      cloudConfig.lastSync = new Date().toISOString();
-      saveCloud();
+      suppressSync = false;
       render();
+      lastPushAt = data.updated_at ? new Date(data.updated_at).getTime() : Date.now();
       refreshCloudStatus();
       return true;
     }
-    setCloudStatus('Xəta: ' + (data.error || 'data oxunmadı'), 'error');
-    return false;
+    await pushToCloud();
+    return true;
   } catch (err) {
     setCloudStatus('Şəbəkə xətası', 'error');
     return false;
   }
 }
 
-async function testCloud() {
-  const url = CLOUD_URL;
-  const secret = $('cloud-secret').value.trim();
-  const result = $('cloud-test-result');
-  if (!secret) {
-    result.textContent = 'Açar tələb olunur';
-    result.style.color = 'var(--red)';
-    return false;
+function subscribeRealtime() {
+  if (realtimeChannel) {
+    sb.removeChannel(realtimeChannel);
+    realtimeChannel = null;
   }
-  result.textContent = 'Yoxlanılır…';
-  result.style.color = 'var(--gold)';
-  try {
-    const res = await fetch(url, {
-      method: 'POST',
-      body: JSON.stringify({ secret, action: 'ping' }),
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      redirect: 'follow'
-    });
-    const data = await res.json();
-    if (data.ok) {
-      result.textContent = 'Bağlandı ✓';
-      result.style.color = 'var(--green)';
-      return true;
+  if (!session) return;
+  realtimeChannel = sb.channel('kassa_state_' + session.user.id)
+    .on('postgres_changes', {
+      event: '*',
+      schema: 'public',
+      table: 'kassa_state',
+      filter: 'user_id=eq.' + session.user.id
+    }, (payload) => {
+      if (!payload.new) return;
+      const remoteUpdated = payload.new.updated_at ? new Date(payload.new.updated_at).getTime() : 0;
+      if (lastPushAt && Math.abs(remoteUpdated - lastPushAt) < 2000) return;
+      suppressSync = true;
+      state = {
+        name: payload.new.name || state.name,
+        initialBalance: Number(payload.new.initial_balance) || 0,
+        transactions: Array.isArray(payload.new.transactions) ? payload.new.transactions : []
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      suppressSync = false;
+      render();
+      lastPushAt = remoteUpdated;
+      refreshCloudStatus();
+      toast('Başqa cihazdan yeniləndi');
+    })
+    .subscribe();
+}
+
+/* ── Auth flow ─────────────── */
+function showSignIn() {
+  $('signin-overlay').classList.add('open');
+  $('signin-stage-email').style.display = '';
+  $('signin-stage-otp').style.display = 'none';
+  $('signin-status').textContent = '';
+  $('signin-status').className = 'signin-status';
+  setTimeout(() => $('signin-email').focus(), 100);
+}
+function hideSignIn() {
+  $('signin-overlay').classList.remove('open');
+}
+function setSigninStatus(text, kind) {
+  const el = $('signin-status');
+  el.textContent = text;
+  el.className = 'signin-status ' + (kind || '');
+}
+
+async function requestOtp() {
+  const email = $('signin-email').value.trim();
+  if (!email || !email.includes('@')) {
+    setSigninStatus('Düzgün email yaz', 'error');
+    return;
+  }
+  $('signin-request-btn').disabled = true;
+  setSigninStatus('Göndərilir…');
+  const { error } = await sb.auth.signInWithOtp({
+    email,
+    options: { shouldCreateUser: true }
+  });
+  $('signin-request-btn').disabled = false;
+  if (error) {
+    setSigninStatus('Xəta: ' + error.message, 'error');
+    return;
+  }
+  $('signin-stage-email').style.display = 'none';
+  $('signin-stage-otp').style.display = '';
+  $('signin-otp-target').textContent = email;
+  $('signin-otp').value = '';
+  setSigninStatus('Email-ini yoxla', 'ok');
+  setTimeout(() => $('signin-otp').focus(), 100);
+}
+
+async function verifyOtp() {
+  const email = $('signin-email').value.trim();
+  const token = $('signin-otp').value.trim().replace(/\s/g, '');
+  if (!token || token.length < 6) {
+    setSigninStatus('6 rəqəmli kod daxil et', 'error');
+    return;
+  }
+  $('signin-verify-btn').disabled = true;
+  setSigninStatus('Yoxlanılır…');
+  const { error } = await sb.auth.verifyOtp({ email, token, type: 'email' });
+  $('signin-verify-btn').disabled = false;
+  if (error) {
+    setSigninStatus('Yanlış kod', 'error');
+    return;
+  }
+  setSigninStatus('Daxil olundu ✓', 'ok');
+}
+
+async function signOut() {
+  if (!confirm('Hesabdan çıxmaq istəyirsən? Bu cihazdakı lokal data təmizlənəcək.')) return;
+  try { if (realtimeChannel) sb.removeChannel(realtimeChannel); } catch (e) {}
+  realtimeChannel = null;
+  await sb.auth.signOut();
+  localStorage.removeItem(STORAGE_KEY);
+  state = { name: 'Fuad', initialBalance: 0, transactions: [] };
+  render();
+  closeSheets();
+  showSignIn();
+}
+
+async function bootAuth() {
+  const { data } = await sb.auth.getSession();
+  session = data.session;
+
+  sb.auth.onAuthStateChange(async (_event, sess) => {
+    const wasSignedIn = !!session;
+    session = sess;
+    if (sess && !wasSignedIn) {
+      hideSignIn();
+      await pullFromCloud();
+      subscribeRealtime();
+      refreshCloudStatus();
+    } else if (!sess) {
+      showSignIn();
     }
-    result.textContent = 'Xəta: ' + (data.error === 'forbidden' ? 'açar yanlışdır' : data.error);
-    result.style.color = 'var(--red)';
-    return false;
-  } catch (err) {
-    result.textContent = 'Şəbəkə xətası — URL düzgün deyil';
-    result.style.color = 'var(--red)';
-    return false;
+  });
+
+  if (session) {
+    hideSignIn();
+    await pullFromCloud();
+    subscribeRealtime();
+    refreshCloudStatus();
+  } else {
+    showSignIn();
   }
 }
 
@@ -1709,55 +1907,24 @@ $('menu-btn').addEventListener('click', () => {
   openSheet('settings-sheet');
 });
 
-$('cloud-config').addEventListener('click', () => {
-  $('cloud-url').value = cloudConfig.url || '';
-  $('cloud-secret').value = cloudConfig.secret || '';
-  $('cloud-test-result').textContent = CLOUD_SECRET_FROM_CONFIG ? 'config.js-dən avtomatik bağlandı ✓' : '';
-  $('cloud-test-result').style.color = CLOUD_SECRET_FROM_CONFIG ? 'var(--green)' : '';
-  $('cloud-secret').readOnly = !!CLOUD_SECRET_FROM_CONFIG;
-  $('cloud-secret').style.opacity = CLOUD_SECRET_FROM_CONFIG ? '0.6' : '1';
-  $('cloud-actions-block').style.display = cloudConfig.enabled ? 'block' : 'none';
-  closeSheets();
-  setTimeout(() => openSheet('cloud-sheet'), 200);
+$('signout-btn').addEventListener('click', signOut);
+
+$('signin-request-btn').addEventListener('click', requestOtp);
+$('signin-verify-btn').addEventListener('click', verifyOtp);
+$('signin-back-btn').addEventListener('click', () => {
+  $('signin-stage-email').style.display = '';
+  $('signin-stage-otp').style.display = 'none';
+  setSigninStatus('');
+  setTimeout(() => $('signin-email').focus(), 50);
 });
-
-$('cloud-test').addEventListener('click', testCloud);
-
-$('cloud-save').addEventListener('click', async () => {
-  const ok = await testCloud();
-  if (!ok) return;
-  cloudConfig.url = $('cloud-url').value.trim();
-  cloudConfig.secret = $('cloud-secret').value.trim();
-  cloudConfig.enabled = true;
-  saveCloud();
-  $('cloud-actions-block').style.display = 'block';
-  refreshCloudStatus();
-  toast('Cloud aktivləşdi');
+$('signin-email').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') { e.preventDefault(); requestOtp(); }
 });
-
-$('cloud-push').addEventListener('click', async () => {
-  if (!confirm('Lokal data buluda göndəriləcək. Buluddakı mövcud data əvəz olunacaq. Davam edək?')) return;
-  await syncToCloud();
-  toast('Buluda göndərildi');
+$('signin-otp').addEventListener('input', (e) => {
+  e.target.value = e.target.value.replace(/[^0-9]/g, '').slice(0, 6);
 });
-
-$('cloud-pull').addEventListener('click', async () => {
-  if (!confirm('Buluddakı data lokala yüklənəcək. Cari lokal data əvəz olunacaq. Davam edək?')) return;
-  const ok = await pullFromCloud();
-  if (ok) toast('Buluddan yükləndi');
-});
-
-$('cloud-disconnect').addEventListener('click', () => {
-  if (!confirm('Cloud bağlantısını silmək? Lokal data toxunulmaz qalacaq.')) return;
-  cloudConfig = { url: '', secret: '', enabled: false, lastSync: null };
-  saveCloud();
-  $('cloud-actions-block').style.display = 'none';
-  $('cloud-url').value = '';
-  $('cloud-secret').value = '';
-  $('cloud-test-result').textContent = '';
-  refreshCloudStatus();
-  closeSheets();
-  toast('Cloud bağlantısı silindi');
+$('signin-otp').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') { e.preventDefault(); verifyOtp(); }
 });
 $('change-name').addEventListener('click', () => {
   const n = prompt('Adınız:', state.name);
@@ -1834,6 +2001,7 @@ $('heatmap').addEventListener('click', (e) => {
 render();
 renderCategories();
 refreshCloudStatus();
+bootAuth();
 
 setInterval(refreshCloudStatus, 60000);
 
