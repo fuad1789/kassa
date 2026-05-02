@@ -1,0 +1,1253 @@
+<!DOCTYPE html>
+<html lang="az">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0F0D0A">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Kassa">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon.svg">
+<link rel="icon" type="image/svg+xml" href="icon.svg">
+<title>Kassa — Şəxsi Maliyyə</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0F0D0A;
+  --surface: #181612;
+  --surface-2: #221F1A;
+  --line: #2A2620;
+  --line-soft: #1F1C17;
+  --text: #F2EADA;
+  --text-dim: #948B7A;
+  --text-muted: #5A5448;
+  --gold: #D4A24C;
+  --gold-soft: rgba(212, 162, 76, 0.12);
+  --green: #8FA877;
+  --green-soft: rgba(143, 168, 119, 0.12);
+  --red: #C46B57;
+  --red-soft: rgba(196, 107, 87, 0.12);
+  --blue: #7B95B5;
+  --blue-soft: rgba(123, 149, 181, 0.12);
+  --serif: 'Geist', system-ui, sans-serif;
+  --sans: 'Geist', system-ui, sans-serif;
+  --mono: 'Geist Mono', ui-monospace, monospace;
+  --ease: cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+button { font: inherit; color: inherit; background: none; border: none; cursor: pointer; }
+input { font: inherit; color: inherit; }
+
+html, body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  font-weight: 400;
+  -webkit-font-smoothing: antialiased;
+  font-feature-settings: "ss01", "cv01", "cv02";
+  overscroll-behavior: none;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+body {
+  background:
+    radial-gradient(ellipse 60% 40% at 0% 0%, rgba(212, 162, 76, 0.10) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 40% at 100% 100%, rgba(123, 149, 181, 0.06) 0%, transparent 60%),
+    var(--bg);
+  background-attachment: fixed;
+  padding: max(28px, env(safe-area-inset-top)) 22px max(120px, calc(env(safe-area-inset-bottom) + 100px));
+  max-width: 540px;
+  margin: 0 auto;
+  position: relative;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3CfeColorMatrix values='0 0 0 0 0.95 0 0 0 0 0.92 0 0 0 0 0.85 0 0 0 0.045 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 1;
+  mix-blend-mode: overlay;
+  opacity: 0.6;
+}
+
+main { position: relative; z-index: 2; }
+
+/* ── Greeting ──────────────────── */
+.greeting {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 44px;
+  animation: fadeUp 0.5s var(--ease) both;
+}
+.greeting-text { color: var(--text-dim); font-size: 14px; line-height: 1.4; letter-spacing: 0.005em; }
+.greeting-text strong { color: var(--text); font-weight: 500; }
+.greeting-date {
+  color: var(--text-muted);
+  font-size: 12px;
+  margin-top: 4px;
+  font-family: var(--mono);
+  letter-spacing: 0.02em;
+}
+
+.menu-btn {
+  width: 42px; height: 42px;
+  border-radius: 50%;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  display: grid; place-items: center;
+  color: var(--text-dim);
+  transition: color 0.2s, border-color 0.2s;
+}
+.menu-btn:hover { color: var(--text); border-color: var(--line); }
+.menu-btn:active { transform: scale(0.94); }
+
+/* ── Balance hero ──────────────── */
+.balance-section {
+  margin-bottom: 36px;
+  animation: fadeUp 0.6s var(--ease) 0.05s both;
+}
+.balance-label {
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 14px;
+  font-weight: 600;
+  font-family: var(--mono);
+}
+.balance-amount {
+  font-family: var(--sans);
+  font-size: clamp(48px, 13vw, 72px);
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: -0.04em;
+  color: var(--text);
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-variant-numeric: tabular-nums;
+}
+.balance-amount .currency {
+  font-size: 0.46em;
+  color: var(--gold);
+  font-weight: 500;
+  letter-spacing: -0.03em;
+}
+.balance-amount .decimal {
+  font-size: 0.5em;
+  color: var(--text-dim);
+  font-weight: 400;
+  letter-spacing: -0.03em;
+}
+.balance-amount.negative #balance-int { color: var(--red); }
+
+.daily-stats {
+  display: flex;
+  gap: 18px;
+  margin-top: 18px;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--text-muted);
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+}
+.daily-stats span { display: flex; align-items: center; gap: 6px; }
+.daily-stats .up { color: var(--green); }
+.daily-stats .down { color: var(--red); }
+.daily-stats .label { font-family: var(--sans); font-size: 12px; color: var(--text-muted); }
+
+/* ── Divider ──────────────────── */
+.divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--line) 15%, var(--line) 85%, transparent);
+  margin: 32px 0 28px;
+}
+
+/* ── Stat cards ───────────────── */
+.cards-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 44px;
+  animation: fadeUp 0.6s var(--ease) 0.1s both;
+}
+
+.stat-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  padding: 20px 18px 18px;
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.2s, border-color 0.25s, background 0.25s;
+  cursor: pointer;
+  text-align: left;
+}
+.stat-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 100% 0%, var(--accent-glow), transparent 60%);
+  opacity: 0;
+  transition: opacity 0.3s;
+  pointer-events: none;
+}
+.stat-card:hover::before { opacity: 1; }
+.stat-card:active { transform: scale(0.98); }
+.stat-card.active { border-color: var(--accent); background: var(--surface-2); }
+.stat-card.active::before { opacity: 1; }
+
+.stat-card.expected { --accent: rgba(123, 149, 181, 0.5); --accent-glow: rgba(123, 149, 181, 0.08); }
+.stat-card.debt { --accent: rgba(212, 162, 76, 0.5); --accent-glow: rgba(212, 162, 76, 0.08); }
+
+.stat-card-label {
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  font-weight: 600;
+  margin-bottom: 16px;
+  font-family: var(--mono);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.stat-card-label .dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  display: inline-block;
+}
+.stat-card.expected .dot { background: var(--blue); }
+.stat-card.debt .dot { background: var(--gold); }
+
+.stat-card-amount {
+  font-family: var(--sans);
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  color: var(--text);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.stat-card-amount .small { font-size: 14px; color: var(--text-dim); font-weight: 500; margin-right: 2px; }
+.stat-card.expected .stat-card-amount { color: var(--blue); }
+.stat-card.debt .stat-card-amount { color: var(--gold); }
+.stat-card-count {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-top: 8px;
+  letter-spacing: 0.05em;
+}
+
+/* ── Section header ───────────── */
+.section-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 18px;
+  animation: fadeUp 0.6s var(--ease) 0.15s both;
+}
+.section-title h2 {
+  font-family: var(--sans);
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--text);
+}
+.section-title .filter {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text-muted);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  font-weight: 500;
+}
+
+/* ── Transactions ─────────────── */
+.transactions {
+  display: flex;
+  flex-direction: column;
+  animation: fadeUp 0.6s var(--ease) 0.2s both;
+}
+
+.transaction {
+  display: flex;
+  align-items: center;
+  padding: 16px 4px;
+  border-bottom: 1px solid var(--line-soft);
+  gap: 14px;
+  cursor: pointer;
+  transition: background 0.15s;
+  position: relative;
+}
+.transaction:hover { background: rgba(255,255,255,0.015); }
+.transaction:last-child { border-bottom: none; }
+.transaction.resolved { opacity: 0.55; }
+
+.tx-icon {
+  width: 38px; height: 38px;
+  border-radius: 11px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  display: grid; place-items: center;
+  flex-shrink: 0;
+  font-size: 15px;
+  font-weight: 600;
+  font-family: var(--sans);
+}
+.tx-icon.income { background: var(--green-soft); border-color: rgba(143, 168, 119, 0.25); color: var(--green); }
+.tx-icon.expense { background: var(--red-soft); border-color: rgba(196, 107, 87, 0.25); color: var(--red); }
+.tx-icon.expected { background: var(--blue-soft); border-color: rgba(123, 149, 181, 0.25); color: var(--blue); }
+.tx-icon.debt { background: var(--gold-soft); border-color: rgba(212, 162, 76, 0.25); color: var(--gold); }
+
+.tx-body { flex: 1; min-width: 0; }
+.tx-title {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--text);
+  margin-bottom: 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  letter-spacing: -0.005em;
+}
+.tx-meta {
+  font-size: 11px;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--mono);
+  letter-spacing: 0.02em;
+}
+.tx-meta .sep { opacity: 0.5; }
+.tx-amount {
+  font-family: var(--sans);
+  font-size: 15px;
+  font-weight: 600;
+  flex-shrink: 0;
+  letter-spacing: -0.015em;
+  font-variant-numeric: tabular-nums;
+}
+.tx-amount.pos { color: var(--green); }
+.tx-amount.neg { color: var(--red); }
+.tx-amount.pending-in { color: var(--blue); }
+.tx-amount.pending-out { color: var(--gold); }
+
+.empty {
+  text-align: center;
+  padding: 56px 20px 32px;
+  color: var(--text-muted);
+  font-family: var(--sans);
+  font-size: 14px;
+  font-weight: 500;
+}
+.empty .small {
+  display: block;
+  font-size: 12px;
+  font-style: normal;
+  font-family: var(--mono);
+  margin-top: 8px;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  opacity: 0.7;
+}
+
+/* ── FAB ──────────────────────── */
+.fab {
+  position: fixed;
+  bottom: max(28px, calc(env(safe-area-inset-bottom) + 22px));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 50;
+  background: var(--text);
+  color: var(--bg);
+  border-radius: 999px;
+  padding: 16px 26px;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 16px 40px rgba(0,0,0,0.55), 0 2px 8px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.4);
+  transition: transform 0.2s var(--ease);
+  animation: fabIn 0.5s var(--ease) 0.4s both;
+}
+.fab:active { transform: translateX(-50%) scale(0.94); }
+.fab svg { width: 17px; height: 17px; stroke-width: 2.6; }
+
+@keyframes fabIn {
+  from { opacity: 0; transform: translateX(-50%) translateY(20px); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+/* ── Bottom Sheet ─────────────── */
+.sheet-backdrop {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.65);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  z-index: 100;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s;
+}
+.sheet-backdrop.open { opacity: 1; pointer-events: auto; }
+
+.sheet {
+  position: fixed;
+  left: 0; right: 0; bottom: 0;
+  background: var(--surface);
+  background-image:
+    radial-gradient(ellipse 80% 30% at 50% 0%, rgba(212, 162, 76, 0.06), transparent 70%);
+  border-top-left-radius: 32px;
+  border-top-right-radius: 32px;
+  border-top: 1px solid var(--line);
+  z-index: 101;
+  transform: translateY(100%);
+  transition: transform 0.42s var(--ease);
+  padding: 14px 24px max(28px, calc(env(safe-area-inset-bottom) + 22px));
+  max-width: 540px;
+  margin: 0 auto;
+  max-height: 92dvh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.sheet.open { transform: translateY(0); }
+
+.sheet-handle {
+  width: 38px; height: 4px;
+  background: var(--text-muted);
+  border-radius: 2px;
+  margin: 0 auto 18px;
+  opacity: 0.35;
+}
+.sheet h3 {
+  font-family: var(--sans);
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  margin-bottom: 4px;
+}
+.sheet .subtitle {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 24px;
+}
+
+/* ── Type tabs ────────────────── */
+.type-tabs {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+  margin-bottom: 12px;
+  background: var(--bg);
+  padding: 5px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+}
+.type-tab {
+  padding: 10px 4px;
+  border-radius: 10px;
+  color: var(--text-dim);
+  font-size: 12px;
+  font-weight: 500;
+  transition: all 0.25s var(--ease);
+  letter-spacing: -0.005em;
+}
+.type-tab.active {
+  background: var(--surface-2);
+  color: var(--text);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.4), inset 0 0 0 1px var(--line);
+}
+.type-tab[data-type="expense"].active { color: var(--red); }
+.type-tab[data-type="income"].active { color: var(--green); }
+.type-tab[data-type="debt"].active { color: var(--gold); }
+.type-tab[data-type="expected"].active { color: var(--blue); }
+
+/* ── Amount input ─────────────── */
+.amount-input-wrap {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 6px;
+  margin: 26px 0 28px;
+  padding: 8px 0;
+}
+.amount-input-currency {
+  font-family: var(--sans);
+  font-size: 28px;
+  color: var(--gold);
+  font-weight: 600;
+  flex-shrink: 0;
+  letter-spacing: -0.03em;
+}
+.amount-input {
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 56px;
+  font-weight: 500;
+  letter-spacing: -0.04em;
+  width: 100%;
+  max-width: 320px;
+  text-align: center;
+  caret-color: var(--gold);
+  font-variant-numeric: tabular-nums;
+}
+.amount-input::placeholder { color: var(--text-muted); opacity: 0.5; }
+
+.amount-static {
+  font-family: var(--sans);
+  font-size: 56px;
+  font-weight: 500;
+  letter-spacing: -0.04em;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Form fields ──────────────── */
+.field { margin-bottom: 16px; }
+.field-label {
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  font-weight: 600;
+  margin-bottom: 10px;
+  display: block;
+  font-family: var(--mono);
+}
+.field-input {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 14px 16px;
+  color: var(--text);
+  font-size: 15px;
+  outline: none;
+  transition: border-color 0.2s, background 0.2s;
+}
+.field-input::placeholder { color: var(--text-muted); }
+.field-input:focus { border-color: var(--gold); background: var(--surface-2); }
+
+.category-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.category-pill {
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 9px 14px;
+  color: var(--text-dim);
+  font-size: 12px;
+  font-weight: 500;
+  transition: all 0.18s;
+  letter-spacing: -0.005em;
+}
+.category-pill:hover { color: var(--text); border-color: var(--text-muted); }
+.category-pill.active {
+  background: var(--text);
+  color: var(--bg);
+  border-color: var(--text);
+}
+
+.submit-btn {
+  width: 100%;
+  background: var(--text);
+  color: var(--bg);
+  border-radius: 16px;
+  padding: 17px;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  margin-top: 16px;
+  transition: transform 0.15s, opacity 0.15s;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.4);
+}
+.submit-btn:active { transform: scale(0.985); }
+.submit-btn:disabled { opacity: 0.35; }
+
+/* ── Detail ───────────────────── */
+.detail-amount-block { text-align: center; padding: 8px 0 8px; }
+.detail-meta {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--text-dim);
+  text-align: center;
+  margin-top: 10px;
+  letter-spacing: 0.02em;
+}
+.detail-note {
+  text-align: center;
+  color: var(--text);
+  font-size: 15px;
+  margin: 18px 0 28px;
+  font-family: var(--sans);
+  font-weight: 500;
+  min-height: 22px;
+}
+
+.tx-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+.tx-action {
+  flex: 1;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 14px;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 500;
+  transition: transform 0.15s, background 0.2s;
+}
+.tx-action:active { transform: scale(0.98); }
+.tx-action.primary { background: var(--green); color: #0F1A12; border-color: var(--green); }
+.tx-action.danger { color: var(--red); border-color: rgba(196, 107, 87, 0.3); }
+.tx-action.danger:hover { background: var(--red-soft); }
+
+/* ── Settings rows ────────────── */
+.settings-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 18px 0;
+  border-bottom: 1px solid var(--line-soft);
+  gap: 12px;
+}
+.settings-row:last-child { border-bottom: none; }
+.settings-label { font-size: 14px; font-weight: 500; }
+.settings-desc {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 3px;
+  font-family: var(--mono);
+  letter-spacing: 0.02em;
+}
+.settings-action {
+  border: 1px solid var(--line);
+  color: var(--text);
+  padding: 9px 14px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 500;
+  flex-shrink: 0;
+  transition: border-color 0.2s, background 0.2s;
+}
+.settings-action:hover { border-color: var(--gold); }
+.settings-action.danger { color: var(--red); border-color: rgba(196, 107, 87, 0.25); }
+.settings-action.danger:hover { background: var(--red-soft); border-color: var(--red); }
+
+/* ── Toast ────────────────────── */
+.toast {
+  position: fixed;
+  top: max(20px, calc(env(safe-area-inset-top) + 12px));
+  left: 50%;
+  transform: translateX(-50%) translateY(-130%);
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  color: var(--text);
+  padding: 12px 22px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 500;
+  z-index: 200;
+  transition: transform 0.45s var(--ease);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+  letter-spacing: -0.005em;
+}
+.toast.show { transform: translateX(-50%) translateY(0); }
+
+/* ── Animations ───────────────── */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Quick chips on home */
+.quick-chips {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  margin-bottom: 28px;
+  padding-bottom: 4px;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.quick-chips::-webkit-scrollbar { display: none; }
+
+.chip {
+  flex-shrink: 0;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 8px 14px;
+  font-size: 12px;
+  color: var(--text-dim);
+  font-weight: 500;
+  transition: all 0.18s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.chip:hover { color: var(--text); border-color: var(--text-muted); }
+.chip.active { background: var(--surface-2); color: var(--text); border-color: var(--line); }
+.chip .dot { width: 5px; height: 5px; border-radius: 50%; background: var(--text-muted); }
+.chip[data-f="expense"] .dot { background: var(--red); }
+.chip[data-f="income"] .dot { background: var(--green); }
+.chip[data-f="debt"] .dot { background: var(--gold); }
+.chip[data-f="expected"] .dot { background: var(--blue); }
+
+@media (max-width: 380px) {
+  body { padding-left: 18px; padding-right: 18px; }
+  .balance-amount { font-size: 48px; }
+  .stat-card-amount { font-size: 22px; }
+}
+</style>
+</head>
+<body>
+<main>
+  <header class="greeting">
+    <div>
+      <div class="greeting-text">Salam, <strong id="user-name">Fuad</strong></div>
+      <div class="greeting-date" id="today"></div>
+    </div>
+    <button class="menu-btn" id="menu-btn" aria-label="Menyu">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+        <circle cx="5" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="19" cy="12" r="1.4"/>
+      </svg>
+    </button>
+  </header>
+
+  <section class="balance-section">
+    <div class="balance-label">Cari balans</div>
+    <div class="balance-amount" id="balance-wrap">
+      <span class="currency">₼</span>
+      <span id="balance-int">0</span><span class="decimal" id="balance-dec">.00</span>
+    </div>
+    <div class="daily-stats">
+      <span class="up">↑ <span id="today-in">0.00</span></span>
+      <span class="down">↓ <span id="today-out">0.00</span></span>
+      <span class="label">bu gün</span>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <section class="cards-row">
+    <button class="stat-card expected" data-filter="expected">
+      <div class="stat-card-label"><span class="dot"></span>Gözlənilən</div>
+      <div class="stat-card-amount"><span class="small">+₼</span><span id="expected-amount">0</span></div>
+      <div class="stat-card-count"><span id="expected-count">0</span> qeyd</div>
+    </button>
+    <button class="stat-card debt" data-filter="debt">
+      <div class="stat-card-label"><span class="dot"></span>Borclarım</div>
+      <div class="stat-card-amount"><span class="small">−₼</span><span id="debt-amount">0</span></div>
+      <div class="stat-card-count"><span id="debt-count">0</span> qeyd</div>
+    </button>
+  </section>
+
+  <div class="quick-chips" id="quick-chips">
+    <button class="chip active" data-f="all"><span class="dot"></span>Hamısı</button>
+    <button class="chip" data-f="expense"><span class="dot"></span>Xərclər</button>
+    <button class="chip" data-f="income"><span class="dot"></span>Gəlirlər</button>
+    <button class="chip" data-f="debt"><span class="dot"></span>Borclar</button>
+    <button class="chip" data-f="expected"><span class="dot"></span>Gözlənilən</button>
+  </div>
+
+  <div class="section-title">
+    <h2 id="section-heading">Son əməliyyatlar</h2>
+    <span class="filter" id="filter-label">Hamısı</span>
+  </div>
+
+  <div class="transactions" id="tx-list"></div>
+</main>
+
+<button class="fab" id="add-btn">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 5v14M5 12h14"/></svg>
+  <span>Əlavə et</span>
+</button>
+
+<!-- Backdrop -->
+<div class="sheet-backdrop" id="backdrop"></div>
+
+<!-- Add sheet -->
+<div class="sheet" id="add-sheet">
+  <div class="sheet-handle"></div>
+  <h3>Yeni qeyd</h3>
+  <div class="subtitle">Növü seçin</div>
+
+  <div class="type-tabs">
+    <button class="type-tab active" data-type="expense">Xərc</button>
+    <button class="type-tab" data-type="income">Gəlir</button>
+    <button class="type-tab" data-type="debt">Borc</button>
+    <button class="type-tab" data-type="expected">Gözlənilən</button>
+  </div>
+
+  <div class="amount-input-wrap">
+    <span class="amount-input-currency">₼</span>
+    <input type="text" inputmode="decimal" autocomplete="off" class="amount-input" id="amount-input" placeholder="0" />
+  </div>
+
+  <div class="field">
+    <label class="field-label">Qeyd</label>
+    <input type="text" class="field-input" id="note-input" placeholder="Nə üçün?">
+  </div>
+
+  <div class="field">
+    <label class="field-label">Kateqoriya</label>
+    <div class="category-pills" id="category-pills"></div>
+  </div>
+
+  <button class="submit-btn" id="submit-btn">Yadda saxla</button>
+</div>
+
+<!-- Detail sheet -->
+<div class="sheet" id="detail-sheet">
+  <div class="sheet-handle"></div>
+  <h3 id="detail-title">Qeyd</h3>
+  <div class="subtitle" id="detail-subtitle">Təfərrüat</div>
+
+  <div class="detail-amount-block">
+    <span class="amount-input-currency" id="detail-curr">₼</span>
+    <span class="amount-static" id="detail-amount">0.00</span>
+  </div>
+  <div class="detail-meta" id="detail-meta"></div>
+  <div class="detail-note" id="detail-note"></div>
+
+  <div class="tx-actions" id="detail-actions"></div>
+</div>
+
+<!-- Settings sheet -->
+<div class="sheet" id="settings-sheet">
+  <div class="sheet-handle"></div>
+  <h3>Tənzimləmələr</h3>
+  <div class="subtitle">İdarəetmə</div>
+
+  <div class="settings-row">
+    <div>
+      <div class="settings-label">İstifadəçi adı</div>
+      <div class="settings-desc" id="settings-name"></div>
+    </div>
+    <button class="settings-action" id="change-name">Dəyiş</button>
+  </div>
+  <div class="settings-row">
+    <div>
+      <div class="settings-label">Başlanğıc balans</div>
+      <div class="settings-desc" id="settings-balance"></div>
+    </div>
+    <button class="settings-action" id="set-balance">Tənzimlə</button>
+  </div>
+  <div class="settings-row">
+    <div>
+      <div class="settings-label">Məlumatları ixrac et</div>
+      <div class="settings-desc">JSON faylı yarat</div>
+    </div>
+    <button class="settings-action" id="export-data">İxrac</button>
+  </div>
+  <div class="settings-row">
+    <div>
+      <div class="settings-label">Məlumatları idxal et</div>
+      <div class="settings-desc">JSON faylından bərpa</div>
+    </div>
+    <button class="settings-action" id="import-data">İdxal</button>
+  </div>
+  <div class="settings-row">
+    <div>
+      <div class="settings-label" style="color:var(--red)">Hər şeyi sil</div>
+      <div class="settings-desc">Bütün məlumatları sil</div>
+    </div>
+    <button class="settings-action danger" id="reset-data">Sil</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+
+const STORAGE_KEY = 'kassa_v1';
+
+const CATEGORIES = {
+  expense: ['Market', 'Yemək', 'Nəqliyyat', 'Kommunal', 'Geyim', 'Əyləncə', 'Səhiyyə', 'Hədiyyə', 'Digər'],
+  income: ['Maaş', 'Bonus', 'Layihə', 'Hədiyyə', 'Geri qaytarma', 'Digər'],
+  debt: ['Şəxsi', 'Kredit', 'Kart borcu', 'Mağaza', 'Digər'],
+  expected: ['Maaş', 'Layihə', 'Geri qaytarma', 'Hədiyyə', 'Digər']
+};
+
+const MONTHS = ['yanvar','fevral','mart','aprel','may','iyun','iyul','avqust','sentyabr','oktyabr','noyabr','dekabr'];
+const MONTHS_SHORT = ['yan','fev','mar','apr','may','iyn','iyl','avq','sen','okt','noy','dek'];
+const DAYS = ['Bazar','Bazar ertəsi','Çərşənbə axşamı','Çərşənbə','Cümə axşamı','Cümə','Şənbə'];
+
+let state = loadState();
+let currentFilter = 'all';
+let currentType = 'expense';
+let currentCategory = null;
+let detailId = null;
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      const s = JSON.parse(raw);
+      if (s && Array.isArray(s.transactions)) return s;
+    }
+  } catch (e) {}
+  return { name: 'Fuad', initialBalance: 0, transactions: [] };
+}
+
+function saveState() { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+
+function fmt(n) {
+  const abs = Math.abs(n);
+  const s = abs.toFixed(2);
+  const [int, dec] = s.split('.');
+  return {
+    sign: n < 0 ? '−' : '',
+    int: int.replace(/\B(?=(\d{3})+(?!\d))/g, ','),
+    dec: dec
+  };
+}
+function fmtFull(n) { const f = fmt(n); return f.sign + f.int + '.' + f.dec; }
+
+function computeBalance() {
+  let b = state.initialBalance;
+  for (const t of state.transactions) {
+    if (t.type === 'income') b += t.amount;
+    if (t.type === 'expense') b -= t.amount;
+  }
+  return b;
+}
+function computeToday() {
+  const today = new Date().toISOString().slice(0, 10);
+  let inn = 0, out = 0;
+  for (const t of state.transactions) {
+    if (t.date.slice(0, 10) !== today) continue;
+    if (t.type === 'income') inn += t.amount;
+    if (t.type === 'expense') out += t.amount;
+  }
+  return { in: inn, out };
+}
+
+function $(id) { return document.getElementById(id); }
+
+function render() {
+  const today = new Date();
+  $('today').textContent = `${today.getDate()} ${MONTHS[today.getMonth()]} · ${DAYS[today.getDay()]}`;
+  $('user-name').textContent = state.name;
+
+  const bal = computeBalance();
+  const f = fmt(bal);
+  $('balance-int').textContent = (bal < 0 ? '−' : '') + f.int;
+  $('balance-dec').textContent = '.' + f.dec;
+  $('balance-wrap').classList.toggle('negative', bal < 0);
+
+  const t = computeToday();
+  $('today-in').textContent = fmtFull(t.in);
+  $('today-out').textContent = fmtFull(t.out);
+
+  const exp = state.transactions.filter(x => x.type === 'expected' && !x.resolved);
+  const debts = state.transactions.filter(x => x.type === 'debt' && !x.resolved);
+  const expSum = exp.reduce((s, x) => s + x.amount, 0);
+  const debtSum = debts.reduce((s, x) => s + x.amount, 0);
+  $('expected-amount').textContent = fmt(expSum).int + '.' + fmt(expSum).dec;
+  $('debt-amount').textContent = fmt(debtSum).int + '.' + fmt(debtSum).dec;
+  $('expected-count').textContent = exp.length;
+  $('debt-count').textContent = debts.length;
+
+  renderList();
+}
+
+function renderList() {
+  const list = $('tx-list');
+  let txs = [...state.transactions].sort((a, b) => b.date.localeCompare(a.date));
+
+  if (currentFilter !== 'all') {
+    txs = txs.filter(t => t.type === currentFilter);
+  }
+
+  const labels = { all: 'Hamısı', expense: 'Xərclər', income: 'Gəlirlər', debt: 'Borclar', expected: 'Gözlənilən' };
+  const headings = { all: 'Son əməliyyatlar', expense: 'Xərclər', income: 'Gəlirlər', debt: 'Borclarım', expected: 'Gözlənilən gəlirlər' };
+  $('filter-label').textContent = labels[currentFilter];
+  $('section-heading').textContent = headings[currentFilter];
+
+  document.querySelectorAll('.chip').forEach(c => c.classList.toggle('active', c.dataset.f === currentFilter));
+  document.querySelectorAll('.stat-card').forEach(c => c.classList.toggle('active', c.dataset.filter === currentFilter));
+
+  if (txs.length === 0) {
+    list.innerHTML = `<div class="empty">Hələ qeyd yoxdur<span class="small">+ düyməsinə basaraq əlavə edin</span></div>`;
+    return;
+  }
+
+  const icons = { expense: '−', income: '+', debt: 'B', expected: 'G' };
+  list.innerHTML = txs.slice(0, 80).map(tx => {
+    const f = fmt(tx.amount);
+    let amountClass = '', amountPrefix = '';
+    if (tx.type === 'income') { amountClass = 'pos'; amountPrefix = '+'; }
+    if (tx.type === 'expense') { amountClass = 'neg'; amountPrefix = '−'; }
+    if (tx.type === 'expected') { amountClass = 'pending-in'; amountPrefix = '+'; }
+    if (tx.type === 'debt') { amountClass = 'pending-out'; amountPrefix = '−'; }
+
+    const d = new Date(tx.date);
+    const dStr = d.getDate() + ' ' + MONTHS_SHORT[d.getMonth()];
+    const isToday = tx.date.slice(0, 10) === new Date().toISOString().slice(0, 10);
+    const dateLabel = isToday ? 'bu gün' : dStr;
+    const resolvedTag = tx.resolved ? `<span class="sep">·</span>ödənilib` : '';
+
+    return `<div class="transaction ${tx.resolved ? 'resolved' : ''}" data-id="${tx.id}">
+      <div class="tx-icon ${tx.type}">${icons[tx.type]}</div>
+      <div class="tx-body">
+        <div class="tx-title">${escapeHtml(tx.note || tx.category || '—')}</div>
+        <div class="tx-meta">${dateLabel}${tx.category ? `<span class="sep">·</span>${escapeHtml(tx.category)}` : ''}${resolvedTag}</div>
+      </div>
+      <div class="tx-amount ${amountClass}">${amountPrefix}₼${f.int}.${f.dec}</div>
+    </div>`;
+  }).join('');
+
+  list.querySelectorAll('.transaction').forEach(el => {
+    el.addEventListener('click', () => openDetail(el.dataset.id));
+  });
+}
+
+function escapeHtml(s) {
+  return String(s || '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+}
+
+/* ── Sheets ────────────────── */
+function openSheet(id) {
+  $('backdrop').classList.add('open');
+  $(id).classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeSheets() {
+  $('backdrop').classList.remove('open');
+  document.querySelectorAll('.sheet').forEach(s => s.classList.remove('open'));
+  document.body.style.overflow = '';
+}
+$('backdrop').addEventListener('click', closeSheets);
+
+/* ── Add ───────────────────── */
+$('add-btn').addEventListener('click', () => {
+  $('amount-input').value = '';
+  $('note-input').value = '';
+  setType('expense');
+  openSheet('add-sheet');
+  setTimeout(() => $('amount-input').focus(), 380);
+});
+
+function setType(type) {
+  currentType = type;
+  document.querySelectorAll('.type-tab').forEach(t => t.classList.toggle('active', t.dataset.type === type));
+  renderCategories();
+}
+function renderCategories() {
+  const wrap = $('category-pills');
+  currentCategory = null;
+  wrap.innerHTML = CATEGORIES[currentType].map(c => `<button class="category-pill" data-cat="${escapeHtml(c)}">${escapeHtml(c)}</button>`).join('');
+  wrap.querySelectorAll('.category-pill').forEach(p => {
+    p.addEventListener('click', () => {
+      wrap.querySelectorAll('.category-pill').forEach(x => x.classList.remove('active'));
+      p.classList.add('active');
+      currentCategory = p.dataset.cat;
+    });
+  });
+}
+
+document.querySelectorAll('.type-tab').forEach(t => t.addEventListener('click', () => setType(t.dataset.type)));
+
+$('amount-input').addEventListener('input', (e) => {
+  let v = e.target.value.replace(',', '.').replace(/[^0-9.]/g, '');
+  const parts = v.split('.');
+  if (parts.length > 2) v = parts[0] + '.' + parts.slice(1).join('');
+  if (parts[1] && parts[1].length > 2) v = parts[0] + '.' + parts[1].slice(0, 2);
+  e.target.value = v;
+});
+
+$('submit-btn').addEventListener('click', () => {
+  const amount = parseFloat($('amount-input').value);
+  if (!amount || amount <= 0) { toast('Məbləği daxil edin'); return; }
+  const tx = {
+    id: 'tx_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
+    type: currentType,
+    amount,
+    note: $('note-input').value.trim(),
+    category: currentCategory,
+    date: new Date().toISOString(),
+    resolved: false
+  };
+  state.transactions.push(tx);
+  saveState();
+  render();
+  closeSheets();
+  toast('Yadda saxlanıldı');
+});
+
+/* ── Detail ────────────────── */
+function openDetail(id) {
+  const tx = state.transactions.find(t => t.id === id);
+  if (!tx) return;
+  detailId = id;
+
+  const titleMap = { expense: 'Xərc', income: 'Gəlir', debt: 'Borc', expected: 'Gözlənilən gəlir' };
+  $('detail-title').textContent = titleMap[tx.type];
+  $('detail-subtitle').textContent = tx.category || tx.type;
+
+  const f = fmt(tx.amount);
+  $('detail-amount').textContent = f.int + '.' + f.dec;
+
+  const d = new Date(tx.date);
+  const dStr = `${d.getDate()} ${MONTHS_SHORT[d.getMonth()]} ${d.getFullYear()} · ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+  $('detail-meta').textContent = dStr + (tx.resolved ? ' · ödənilib' : '');
+  $('detail-note').textContent = tx.note || '';
+
+  const actions = $('detail-actions');
+  let html = '';
+  if ((tx.type === 'expected' || tx.type === 'debt') && !tx.resolved) {
+    html += `<button class="tx-action primary" data-act="resolve">${tx.type === 'expected' ? 'Aldım' : 'Ödədim'}</button>`;
+  }
+  html += `<button class="tx-action danger" data-act="delete">Sil</button>`;
+  actions.innerHTML = html;
+
+  actions.querySelectorAll('button').forEach(b => b.addEventListener('click', () => handleDetailAction(b.dataset.act)));
+  openSheet('detail-sheet');
+}
+
+function handleDetailAction(act) {
+  const tx = state.transactions.find(t => t.id === detailId);
+  if (!tx) return;
+  if (act === 'delete') {
+    if (!confirm('Bu qeydi silmək istədiyinizdən əminsiniz?')) return;
+    state.transactions = state.transactions.filter(t => t.id !== detailId);
+    saveState(); render(); closeSheets(); toast('Silindi');
+  } else if (act === 'resolve') {
+    tx.resolved = true;
+    state.transactions.push({
+      id: 'tx_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
+      type: tx.type === 'expected' ? 'income' : 'expense',
+      amount: tx.amount,
+      note: tx.note || (tx.type === 'expected' ? 'Gözlənilən gəlir' : 'Borc ödənişi'),
+      category: tx.category,
+      date: new Date().toISOString(),
+      resolved: false,
+      fromId: tx.id
+    });
+    saveState(); render(); closeSheets();
+    toast(tx.type === 'expected' ? 'Balansa əlavə olundu' : 'Borc ödənildi');
+  }
+}
+
+/* ── Filters ───────────────── */
+document.querySelectorAll('.chip').forEach(c => {
+  c.addEventListener('click', () => {
+    currentFilter = c.dataset.f;
+    renderList();
+  });
+});
+document.querySelectorAll('.stat-card').forEach(c => {
+  c.addEventListener('click', () => {
+    currentFilter = currentFilter === c.dataset.filter ? 'all' : c.dataset.filter;
+    renderList();
+    setTimeout(() => $('section-heading').scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+  });
+});
+
+/* ── Settings ──────────────── */
+$('menu-btn').addEventListener('click', () => {
+  $('settings-name').textContent = state.name;
+  $('settings-balance').textContent = '₼ ' + fmtFull(state.initialBalance);
+  openSheet('settings-sheet');
+});
+$('change-name').addEventListener('click', () => {
+  const n = prompt('Adınız:', state.name);
+  if (n && n.trim()) {
+    state.name = n.trim(); saveState(); render();
+    $('settings-name').textContent = state.name;
+    toast('Yeniləndi');
+  }
+});
+$('set-balance').addEventListener('click', () => {
+  const n = prompt('Başlanğıc balans (₼):', state.initialBalance);
+  if (n !== null) {
+    const v = parseFloat(String(n).replace(',', '.'));
+    if (!isNaN(v)) {
+      state.initialBalance = v; saveState(); render();
+      $('settings-balance').textContent = '₼ ' + fmtFull(v);
+      toast('Balans yeniləndi');
+    }
+  }
+});
+$('export-data').addEventListener('click', () => {
+  const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `kassa-${new Date().toISOString().slice(0,10)}.json`;
+  a.click(); URL.revokeObjectURL(url);
+});
+$('import-data').addEventListener('click', () => {
+  const inp = document.createElement('input');
+  inp.type = 'file'; inp.accept = 'application/json';
+  inp.onchange = (e) => {
+    const file = e.target.files[0]; if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const data = JSON.parse(ev.target.result);
+        if (data && Array.isArray(data.transactions)) {
+          state = data; saveState(); render(); closeSheets(); toast('İdxal edildi');
+        } else { toast('Yanlış format'); }
+      } catch { toast('Xəta: oxunmadı'); }
+    };
+    reader.readAsText(file);
+  };
+  inp.click();
+});
+$('reset-data').addEventListener('click', () => {
+  if (!confirm('Bütün məlumatları silmək?')) return;
+  if (!confirm('Bu geri qaytarılmazdır. Davam edək?')) return;
+  state = { name: state.name, initialBalance: 0, transactions: [] };
+  saveState(); render(); closeSheets(); toast('Sıfırlandı');
+});
+
+/* ── Toast ─────────────────── */
+let toastTimer;
+function toast(msg) {
+  const t = $('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+/* ── Init ──────────────────── */
+render();
+renderCategories();
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  });
+}
+</script>
+</body>
+</html>
