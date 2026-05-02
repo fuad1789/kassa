@@ -1083,22 +1083,17 @@ main { position: relative; z-index: 2; }
   <h3>Cloud sinxron</h3>
   <div class="subtitle">Google Sheets backup</div>
 
-  <ol class="steps-list">
-    <li><code>sheets.google.com</code> → yeni Spreadsheet</li>
-    <li>Extensions → Apps Script</li>
-    <li><code>apps-script.gs</code> faylının kodunu yapışdır</li>
-    <li><code>SECRET</code> dəyərini öz açarınla əvəz et</li>
-    <li>Deploy → Web app → "Anyone" → URL kopyala</li>
-  </ol>
-  <div style="font-size:11px;color:var(--text-muted);font-family:var(--mono);margin-bottom:18px;letter-spacing:0.02em">Tam təlimat: CLOUD_SETUP.md</div>
-
-  <div class="field">
-    <label class="field-label">Web App URL</label>
-    <input type="url" id="cloud-url" class="field-input" placeholder="https://script.google.com/macros/s/.../exec" autocomplete="off">
+  <div style="background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:20px">
+    <div style="font-size:10px;color:var(--text-muted);letter-spacing:0.18em;text-transform:uppercase;font-family:var(--mono);font-weight:600;margin-bottom:6px">Backend</div>
+    <div style="font-family:var(--mono);font-size:11px;color:var(--green);word-break:break-all;letter-spacing:-0.005em">script.google.com/.../exec ✓</div>
   </div>
+
+  <input type="hidden" id="cloud-url">
+
   <div class="field">
     <label class="field-label">Açar (secret)</label>
     <input type="text" id="cloud-secret" class="field-input" placeholder="Apps Script-də təyin etdiyin söz" autocomplete="off">
+    <div style="font-size:11px;color:var(--text-muted);font-family:var(--mono);margin-top:8px;letter-spacing:0.01em">Apps Script-də <code style="background:var(--bg);padding:1px 5px;border-radius:3px;border:1px solid var(--line);color:var(--gold)">const SECRET = '...'</code> arasındakı dəyər</div>
   </div>
 
   <div style="text-align:center;margin:8px 0 14px;font-size:13px;color:var(--text-muted);min-height:18px" id="cloud-test-result"></div>
@@ -1120,11 +1115,16 @@ main { position: relative; z-index: 2; }
 
 <div class="toast" id="toast"></div>
 
+<script src="config.js" onerror="console.info('[kassa] config.js yoxdur — manual SECRET tələb olunacaq')"></script>
 <script>
 'use strict';
 
 const STORAGE_KEY = 'kassa_v1';
 const CLOUD_KEY = 'kassa_cloud_v1';
+const DEFAULT_CLOUD_URL = 'https://script.google.com/macros/s/AKfycbyEWAPQ5DnYUOViYme5GlE3tdLejEzV_2ud98dc-Ry35yUWxcr0Q6bvHcwHtMbYZOnR/exec';
+const CFG = (typeof window !== 'undefined' && window.KASSA_CONFIG) ? window.KASSA_CONFIG : {};
+const CLOUD_URL = (CFG.URL && CFG.URL.trim()) ? CFG.URL.trim() : DEFAULT_CLOUD_URL;
+const CLOUD_SECRET_FROM_CONFIG = (CFG.SECRET && CFG.SECRET.trim() && CFG.SECRET.trim() !== 'BURAYA_SECRETI_YAZ') ? CFG.SECRET.trim() : '';
 
 const CATEGORIES = {
   expense: ['Market', 'Yemək', 'Nəqliyyat', 'Kommunal', 'Geyim', 'Əyləncə', 'Səhiyyə', 'Hədiyyə', 'Digər'],
@@ -1161,11 +1161,17 @@ function saveState() {
 
 let cloudConfig = loadCloud();
 function loadCloud() {
+  let c = { url: CLOUD_URL, secret: '', enabled: false, lastSync: null };
   try {
     const raw = localStorage.getItem(CLOUD_KEY);
-    if (raw) return JSON.parse(raw);
+    if (raw) c = { ...c, ...JSON.parse(raw) };
   } catch (e) {}
-  return { url: '', secret: '', enabled: false, lastSync: null };
+  c.url = CLOUD_URL;
+  if (CLOUD_SECRET_FROM_CONFIG) {
+    c.secret = CLOUD_SECRET_FROM_CONFIG;
+    c.enabled = true;
+  }
+  return c;
 }
 function saveCloud() { localStorage.setItem(CLOUD_KEY, JSON.stringify(cloudConfig)); }
 
@@ -1199,7 +1205,8 @@ function refreshCloudStatus() {
     $('cloud-config').textContent = 'Quraşdır';
     return;
   }
-  const last = cloudConfig.lastSync ? 'Son: ' + timeAgo(cloudConfig.lastSync) : 'Aktiv';
+  const prefix = CLOUD_SECRET_FROM_CONFIG ? 'config.js · ' : '';
+  const last = cloudConfig.lastSync ? prefix + 'son: ' + timeAgo(cloudConfig.lastSync) : prefix + 'aktiv';
   setCloudStatus(last, 'ok');
   $('cloud-config').textContent = 'İdarə et';
 }
@@ -1263,11 +1270,11 @@ async function pullFromCloud() {
 }
 
 async function testCloud() {
-  const url = $('cloud-url').value.trim();
+  const url = CLOUD_URL;
   const secret = $('cloud-secret').value.trim();
   const result = $('cloud-test-result');
-  if (!url || !secret) {
-    result.textContent = 'URL və açar tələb olunur';
+  if (!secret) {
+    result.textContent = 'Açar tələb olunur';
     result.style.color = 'var(--red)';
     return false;
   }
@@ -1705,7 +1712,10 @@ $('menu-btn').addEventListener('click', () => {
 $('cloud-config').addEventListener('click', () => {
   $('cloud-url').value = cloudConfig.url || '';
   $('cloud-secret').value = cloudConfig.secret || '';
-  $('cloud-test-result').textContent = '';
+  $('cloud-test-result').textContent = CLOUD_SECRET_FROM_CONFIG ? 'config.js-dən avtomatik bağlandı ✓' : '';
+  $('cloud-test-result').style.color = CLOUD_SECRET_FROM_CONFIG ? 'var(--green)' : '';
+  $('cloud-secret').readOnly = !!CLOUD_SECRET_FROM_CONFIG;
+  $('cloud-secret').style.opacity = CLOUD_SECRET_FROM_CONFIG ? '0.6' : '1';
   $('cloud-actions-block').style.display = cloudConfig.enabled ? 'block' : 'none';
   closeSheets();
   setTimeout(() => openSheet('cloud-sheet'), 200);

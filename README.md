@@ -2,6 +2,32 @@
 
 Şəxsi gəlir, xərc, borc və gözlənilən pul idarəçiliyi üçün PWA tətbiq.
 
+## Cloud sinxron (avtomatik bağlanma)
+
+`config.js` lokal faylıdır, `.gitignore`-dadır — repo-ya getmir.
+
+```bash
+cp config.example.js config.js
+# config.js-i aç, SECRET-i öz dəyərinə dəyiş
+```
+
+`config.js` içində:
+```js
+window.KASSA_CONFIG = {
+  SECRET: 'fuad_kassa_2026_xyz',  // Apps Script-dəki SECRET ilə eyni
+  URL: ''  // boş qoy → default URL işləyir
+};
+```
+
+App-i açanda cloud avtomatik aktivləşəcək. Heç nə klikləmək lazım deyil.
+
+⚠️ **`config.js` faylı public olmamalıdır.** PWA-nı GitHub Pages-də host edirsənsə:
+- ya repo-nu **private** et
+- ya da Vercel/Netlify istifadə et (config.js-i deploy zamanı əl ilə yüklə)
+- ya local PC-də `python -m http.server` ilə işlət
+
+`config.js` yoxdursa, app yenə işləyir — sadəcə Settings → Cloud sinxron-da SECRET manual daxil edirsən.
+
 ## İşə salmaq
 
 PWA-nın düzgün işləməsi üçün (service worker, install) sadə HTTP server lazımdır:
