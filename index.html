@@ -151,6 +151,65 @@ main { position: relative; z-index: 2; }
 }
 .balance-amount.negative #balance-int { color: var(--red); }
 
+/* ── Forecast (balance + expected − debt) ── */
+.forecast-line {
+  margin-top: 16px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-variant-numeric: tabular-nums;
+  transition: border-color 0.25s, background 0.25s;
+}
+.forecast-line:hover { border-color: rgba(212, 162, 76, 0.25); }
+.forecast-left {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.forecast-label {
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+.forecast-formula {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  color: var(--text-muted);
+  letter-spacing: -0.01em;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.forecast-formula .plus { color: var(--blue); }
+.forecast-formula .minus { color: var(--gold); }
+.forecast-formula .sep { color: var(--line); }
+.forecast-amount {
+  font-family: var(--sans);
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  color: var(--text);
+  white-space: nowrap;
+}
+.forecast-amount .currency {
+  font-size: 0.6em;
+  color: var(--gold);
+  margin-right: 2px;
+  font-weight: 500;
+}
+.forecast-amount .decimal { font-size: 0.62em; color: var(--text-dim); font-weight: 400; }
+.forecast-line.negative .forecast-amount { color: var(--red); }
+
 .daily-stats {
   display: flex;
   gap: 18px;
@@ -905,6 +964,19 @@ main { position: relative; z-index: 2; }
       <span class="currency">₼</span>
       <span id="balance-int">0</span><span class="decimal" id="balance-dec">.00</span>
     </div>
+    <div class="forecast-line" id="forecast-wrap">
+      <div class="forecast-left">
+        <span class="forecast-label">Proqnoz balans</span>
+        <span class="forecast-formula">
+          <span>balans</span>
+          <span class="plus">+ gözlənilən</span>
+          <span class="minus">− borc</span>
+        </span>
+      </div>
+      <div class="forecast-amount">
+        <span class="currency">₼</span><span id="forecast-int">0</span><span class="decimal" id="forecast-dec">.00</span>
+      </div>
+    </div>
     <div class="daily-stats">
       <span class="up">↑ <span id="today-in">0.00</span></span>
       <span class="down">↓ <span id="today-out">0.00</span></span>
@@ -1341,6 +1413,12 @@ function render() {
   $('debt-amount').textContent = fmt(debtSum).int + '.' + fmt(debtSum).dec;
   $('expected-count').textContent = exp.length;
   $('debt-count').textContent = debts.length;
+
+  const forecast = bal + expSum - debtSum;
+  const ff = fmt(forecast);
+  $('forecast-int').textContent = (forecast < 0 ? '−' : '') + ff.int;
+  $('forecast-dec').textContent = '.' + ff.dec;
+  $('forecast-wrap').classList.toggle('negative', forecast < 0);
 
   renderSparkline();
   renderHeatmap();
