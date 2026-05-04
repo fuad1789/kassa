@@ -1760,7 +1760,17 @@ function decimalFormat(e) {
   e.target.value = v;
 }
 $('amount-input').addEventListener('input', decimalFormat);
-$('partial-amount').addEventListener('input', decimalFormat);
+
+$('partial-amount').addEventListener('input', (e) => {
+  decimalFormat(e);
+  const tx = state.transactions.find(t => t.id === detailId);
+  if (!tx) return;
+  const remaining = txRemaining(tx);
+  const v = parseFloat(e.target.value);
+  if (!isNaN(v) && v > remaining) {
+    e.target.value = remaining.toFixed(2);
+  }
+});
 
 $('partial-amount').addEventListener('keydown', (e) => {
   if (e.key === 'Enter') {
@@ -1835,7 +1845,6 @@ function openDetail(id) {
       <button class="tx-action primary" data-act="resolve">${fullLabel}</button>
     </div>`;
     html += `<div class="action-row">
-      <button class="tx-action ghost" data-act="half">Yarısı</button>
       <button class="tx-action ghost" data-act="partial">Hissəvi</button>
     </div>`;
   }
@@ -1861,10 +1870,6 @@ function handleDetailAction(act) {
 
   if (act === 'resolve') {
     applyPayment(tx, txRemaining(tx));
-  } else if (act === 'half') {
-    const half = round2(txRemaining(tx) / 2);
-    if (half <= 0) { toast('Qalmayıb'); return; }
-    applyPayment(tx, half);
   } else if (act === 'partial') {
     togglePartial(tx);
   }
