@@ -772,8 +772,13 @@ main { position: relative; z-index: 2; }
 
 .tx-actions {
   display: flex;
+  flex-direction: column;
   gap: 8px;
   margin-top: 8px;
+}
+.action-row {
+  display: flex;
+  gap: 8px;
 }
 .tx-action {
   flex: 1;
@@ -784,12 +789,75 @@ main { position: relative; z-index: 2; }
   color: var(--text);
   font-size: 14px;
   font-weight: 500;
-  transition: transform 0.15s, background 0.2s;
+  transition: transform 0.15s, background 0.2s, border-color 0.2s;
+  white-space: nowrap;
 }
 .tx-action:active { transform: scale(0.98); }
 .tx-action.primary { background: var(--green); color: #0F1A12; border-color: var(--green); }
 .tx-action.danger { color: var(--red); border-color: rgba(196, 107, 87, 0.3); }
 .tx-action.danger:hover { background: var(--red-soft); }
+.tx-action.ghost { font-size: 13px; padding: 13px 8px; }
+.tx-action.ghost:hover { border-color: var(--gold); }
+
+/* ── Partial pay ──────────────── */
+.detail-partial {
+  max-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  transition: max-height 0.32s var(--ease), opacity 0.25s var(--ease), margin-top 0.32s var(--ease);
+  margin-top: 0;
+}
+.detail-partial.open {
+  max-height: 200px;
+  opacity: 1;
+  margin-top: 10px;
+}
+.partial-row {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+.partial-input {
+  flex: 1;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 14px 16px;
+  color: var(--text);
+  font-size: 16px;
+  font-family: var(--sans);
+  font-variant-numeric: tabular-nums;
+  outline: none;
+  transition: border-color 0.2s, background 0.2s;
+  min-width: 0;
+  letter-spacing: -0.01em;
+}
+.partial-input::placeholder { color: var(--text-muted); }
+.partial-input:focus { border-color: var(--gold); background: var(--surface-2); }
+.partial-confirm {
+  flex: 0 0 auto;
+  background: var(--gold);
+  color: #1A1410;
+  border: 1px solid var(--gold);
+  border-radius: 14px;
+  padding: 0 22px;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  transition: transform 0.15s, opacity 0.15s;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.3);
+}
+.partial-confirm:active { transform: scale(0.96); }
+.partial-confirm:disabled { opacity: 0.4; }
+.partial-hint {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-muted);
+  letter-spacing: 0.04em;
+  margin-top: 10px;
+  text-align: center;
+}
+.partial-hint .num { color: var(--gold); }
 
 /* ── Settings rows ────────────── */
 .settings-row {
@@ -1098,6 +1166,14 @@ main { position: relative; z-index: 2; }
   <div class="detail-note" id="detail-note"></div>
 
   <div class="tx-actions" id="detail-actions"></div>
+
+  <div class="detail-partial" id="detail-partial">
+    <div class="partial-row">
+      <input type="text" inputmode="decimal" autocomplete="off" class="partial-input" id="partial-amount" placeholder="0.00" />
+      <button class="partial-confirm" id="partial-confirm">Təsdiq</button>
+    </div>
+    <div class="partial-hint" id="partial-hint"></div>
+  </div>
 </div>
 
 <!-- Settings sheet -->
@@ -1390,6 +1466,12 @@ function computeToday() {
 
 function $(id) { return document.getElementById(id); }
 
+function txRemaining(tx) {
+  const paid = Number(tx.paid) || 0;
+  return Math.max(0, tx.amount - paid);
+}
+function round2(n) { return Math.round(n * 100) / 100; }
+
 function render() {
   const today = new Date();
   $('today').textContent = `${today.getDate()} ${MONTHS[today.getMonth()]} · ${DAYS[today.getDay()]}`;
@@ -1407,8 +1489,8 @@ function render() {
 
   const exp = state.transactions.filter(x => x.type === 'expected' && !x.resolved);
   const debts = state.transactions.filter(x => x.type === 'debt' && !x.resolved);
-  const expSum = exp.reduce((s, x) => s + x.amount, 0);
-  const debtSum = debts.reduce((s, x) => s + x.amount, 0);
+  const expSum = exp.reduce((s, x) => s + txRemaining(x), 0);
+  const debtSum = debts.reduce((s, x) => s + txRemaining(x), 0);
   $('expected-amount').textContent = fmt(expSum).int + '.' + fmt(expSum).dec;
   $('debt-amount').textContent = fmt(debtSum).int + '.' + fmt(debtSum).dec;
   $('expected-count').textContent = exp.length;
@@ -1591,7 +1673,10 @@ function renderList() {
 
   const icons = { expense: '−', income: '+', debt: 'B', expected: 'G' };
   list.innerHTML = txs.slice(0, 80).map(tx => {
-    const f = fmt(tx.amount);
+    const isPending = (tx.type === 'debt' || tx.type === 'expected');
+    const partialActive = isPending && !tx.resolved && (Number(tx.paid) || 0) > 0;
+    const displayAmount = (isPending && !tx.resolved) ? txRemaining(tx) : tx.amount;
+    const f = fmt(displayAmount);
     let amountClass = '', amountPrefix = '';
     if (tx.type === 'income') { amountClass = 'pos'; amountPrefix = '+'; }
     if (tx.type === 'expense') { amountClass = 'neg'; amountPrefix = '−'; }
@@ -1602,13 +1687,15 @@ function renderList() {
     const dStr = d.getDate() + ' ' + MONTHS_SHORT[d.getMonth()];
     const isToday = tx.date.slice(0, 10) === new Date().toISOString().slice(0, 10);
     const dateLabel = isToday ? 'bu gün' : dStr;
-    const resolvedTag = tx.resolved ? `<span class="sep">·</span>ödənilib` : '';
+    let stateTag = '';
+    if (tx.resolved) stateTag = `<span class="sep">·</span>ödənilib`;
+    else if (partialActive) stateTag = `<span class="sep">·</span>qismən`;
 
     return `<div class="transaction ${tx.resolved ? 'resolved' : ''}" data-id="${tx.id}">
       <div class="tx-icon ${tx.type}">${icons[tx.type]}</div>
       <div class="tx-body">
         <div class="tx-title">${escapeHtml(tx.note || tx.category || '—')}</div>
-        <div class="tx-meta">${dateLabel}${tx.category ? `<span class="sep">·</span>${escapeHtml(tx.category)}` : ''}${resolvedTag}</div>
+        <div class="tx-meta">${dateLabel}${tx.category ? `<span class="sep">·</span>${escapeHtml(tx.category)}` : ''}${stateTag}</div>
       </div>
       <div class="tx-amount ${amountClass}">${amountPrefix}₼${f.int}.${f.dec}</div>
     </div>`;
@@ -1665,12 +1752,29 @@ function renderCategories() {
 
 document.querySelectorAll('.type-tab').forEach(t => t.addEventListener('click', () => setType(t.dataset.type)));
 
-$('amount-input').addEventListener('input', (e) => {
+function decimalFormat(e) {
   let v = e.target.value.replace(',', '.').replace(/[^0-9.]/g, '');
   const parts = v.split('.');
   if (parts.length > 2) v = parts[0] + '.' + parts.slice(1).join('');
   if (parts[1] && parts[1].length > 2) v = parts[0] + '.' + parts[1].slice(0, 2);
   e.target.value = v;
+}
+$('amount-input').addEventListener('input', decimalFormat);
+$('partial-amount').addEventListener('input', decimalFormat);
+
+$('partial-amount').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    $('partial-confirm').click();
+  }
+});
+
+$('partial-confirm').addEventListener('click', () => {
+  const tx = state.transactions.find(t => t.id === detailId);
+  if (!tx) return;
+  const v = parseFloat($('partial-amount').value);
+  if (!v || v <= 0) { toast('Məbləği daxil edin'); return; }
+  applyPayment(tx, v);
 });
 
 $('submit-btn').addEventListener('click', () => {
@@ -1702,20 +1806,42 @@ function openDetail(id) {
   $('detail-title').textContent = titleMap[tx.type];
   $('detail-subtitle').textContent = tx.category || tx.type;
 
-  const f = fmt(tx.amount);
+  const isPending = (tx.type === 'debt' || tx.type === 'expected');
+  const remaining = isPending ? txRemaining(tx) : tx.amount;
+  const paid = Number(tx.paid) || 0;
+  const showAmount = (isPending && !tx.resolved) ? remaining : tx.amount;
+  const f = fmt(showAmount);
   $('detail-amount').textContent = f.int + '.' + f.dec;
 
   const d = new Date(tx.date);
   const dStr = `${d.getDate()} ${MONTHS_SHORT[d.getMonth()]} ${d.getFullYear()} · ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
-  $('detail-meta').textContent = dStr + (tx.resolved ? ' · ödənilib' : '');
+  let metaText = dStr;
+  if (tx.resolved) {
+    metaText += ' · tam ' + (tx.type === 'expected' ? 'alınıb' : 'ödənilib');
+  } else if (isPending && paid > 0) {
+    metaText += ` · ₼${fmtFull(paid)} / ₼${fmtFull(tx.amount)}`;
+  }
+  $('detail-meta').textContent = metaText;
   $('detail-note').textContent = tx.note || '';
+
+  $('detail-partial').classList.remove('open');
+  $('partial-amount').value = '';
 
   const actions = $('detail-actions');
   let html = '';
-  if ((tx.type === 'expected' || tx.type === 'debt') && !tx.resolved) {
-    html += `<button class="tx-action primary" data-act="resolve">${tx.type === 'expected' ? 'Aldım' : 'Ödədim'}</button>`;
+  if (isPending && !tx.resolved) {
+    const fullLabel = tx.type === 'expected' ? 'Tam aldım' : 'Tam ödədim';
+    html += `<div class="action-row">
+      <button class="tx-action primary" data-act="resolve">${fullLabel}</button>
+    </div>`;
+    html += `<div class="action-row">
+      <button class="tx-action ghost" data-act="half">Yarısı</button>
+      <button class="tx-action ghost" data-act="partial">Hissəvi</button>
+    </div>`;
   }
-  html += `<button class="tx-action danger" data-act="delete">Sil</button>`;
+  html += `<div class="action-row">
+    <button class="tx-action danger" data-act="delete">Sil</button>
+  </div>`;
   actions.innerHTML = html;
 
   actions.querySelectorAll('button').forEach(b => b.addEventListener('click', () => handleDetailAction(b.dataset.act)));
@@ -1725,24 +1851,73 @@ function openDetail(id) {
 function handleDetailAction(act) {
   const tx = state.transactions.find(t => t.id === detailId);
   if (!tx) return;
+
   if (act === 'delete') {
     if (!confirm('Bu qeydi silmək istədiyinizdən əminsiniz?')) return;
     state.transactions = state.transactions.filter(t => t.id !== detailId);
     saveState(); render(); closeSheets(); toast('Silindi');
-  } else if (act === 'resolve') {
+    return;
+  }
+
+  if (act === 'resolve') {
+    applyPayment(tx, txRemaining(tx));
+  } else if (act === 'half') {
+    const half = round2(txRemaining(tx) / 2);
+    if (half <= 0) { toast('Qalmayıb'); return; }
+    applyPayment(tx, half);
+  } else if (act === 'partial') {
+    togglePartial(tx);
+  }
+}
+
+function togglePartial(tx) {
+  const wrap = $('detail-partial');
+  const inp = $('partial-amount');
+  const hint = $('partial-hint');
+  const isOpen = wrap.classList.contains('open');
+  if (isOpen) {
+    wrap.classList.remove('open');
+    return;
+  }
+  inp.value = '';
+  hint.innerHTML = `Qalan: <span class="num">₼${fmtFull(txRemaining(tx))}</span>`;
+  wrap.classList.add('open');
+  setTimeout(() => inp.focus(), 80);
+}
+
+function applyPayment(tx, payAmount) {
+  const remaining = txRemaining(tx);
+  const amount = round2(Number(payAmount) || 0);
+  if (amount <= 0) { toast('Məbləği daxil edin'); return; }
+  if (amount > remaining + 0.005) { toast(`Maksimum ₼${fmtFull(remaining)}`); return; }
+
+  const safe = Math.min(amount, remaining);
+
+  state.transactions.push({
+    id: 'tx_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
+    type: tx.type === 'expected' ? 'income' : 'expense',
+    amount: safe,
+    note: tx.note || (tx.type === 'expected' ? 'Gözlənilən gəlir' : 'Borc ödənişi'),
+    category: tx.category,
+    date: new Date().toISOString(),
+    resolved: false,
+    fromId: tx.id
+  });
+
+  const newPaid = round2((Number(tx.paid) || 0) + safe);
+  tx.paid = newPaid;
+  const left = round2(tx.amount - newPaid);
+  if (left <= 0.005) {
     tx.resolved = true;
-    state.transactions.push({
-      id: 'tx_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
-      type: tx.type === 'expected' ? 'income' : 'expense',
-      amount: tx.amount,
-      note: tx.note || (tx.type === 'expected' ? 'Gözlənilən gəlir' : 'Borc ödənişi'),
-      category: tx.category,
-      date: new Date().toISOString(),
-      resolved: false,
-      fromId: tx.id
-    });
-    saveState(); render(); closeSheets();
-    toast(tx.type === 'expected' ? 'Balansa əlavə olundu' : 'Borc ödənildi');
+  }
+
+  saveState(); render(); closeSheets();
+
+  if (tx.resolved) {
+    toast(tx.type === 'expected' ? 'Tam alındı' : 'Borc tam ödənildi');
+  } else {
+    const verb = tx.type === 'expected' ? 'alındı' : 'ödənildi';
+    toast(`₼${fmtFull(safe)} ${verb} · qalır ₼${fmtFull(left)}`);
   }
 }
 
